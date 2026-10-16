@@ -44,6 +44,14 @@ class SettingsStore(context: Context) {
         get() = prefs.getString(KEY_AI_KEY, "").orEmpty()
         set(value) = prefs.edit().putString(KEY_AI_KEY, value.trim()).apply()
 
+    var seenVersionCode: Int
+        get() = prefs.getInt(KEY_SEEN_VERSION, 0)
+        set(value) = prefs.edit().putInt(KEY_SEEN_VERSION, value).apply()
+
+    var updateCheckedAt: Long
+        get() = prefs.getLong(KEY_UPDATE_CHECKED, 0L)
+        set(value) = prefs.edit().putLong(KEY_UPDATE_CHECKED, value).apply()
+
     val isLoggedIn: Boolean
         get() = token.isNotBlank() && serverUrl.isNotBlank()
 
@@ -94,5 +102,7 @@ class SettingsStore(context: Context) {
         private const val KEY_AI_URL = "ai_base_url"
         private const val KEY_AI_MODEL = "ai_model"
         private const val KEY_AI_KEY = "ai_api_key"
+        private const val KEY_SEEN_VERSION = "seen_version_code"
+        private const val KEY_UPDATE_CHECKED = "update_checked_at"
     }
 }

@@ -84,6 +84,8 @@ async function route(req, res, url, user) {
   if (req.method === "GET" && pathname === "/api/health") {
     return send(res, 200, { ok: true, modelConfigured: Boolean(GROK_API_KEY), model: GROK_MODEL });
   }
+  if (req.method === "GET" && pathname === "/api/app") return send(res, 200, appRelease());
+  if (req.method === "GET" && pathname === "/api/app/download") return downloadApp(res);
   if (req.method === "POST" && pathname === "/api/auth/register") return register(req, res);
   if (req.method === "POST" && pathname === "/api/auth/login") return login(req, res);
   if (!user) return send(res, 401, { error: "请先登录" });
@@ -736,6 +738,35 @@ function setCors(res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Headers", "Authorization, Content-Type");
   res.setHeader("Access-Control-Allow-Methods", "GET, POST, PATCH, DELETE, OPTIONS");
+}
+
+function appRelease() {
+  const file = path.join(root, "release.json");
+  if (!fs.existsSync(file)) throw httpError(404, "还没有发布版本");
+  const release = JSON.parse(fs.readFileSync(file, "utf8"));
+  const apk = path.join(root, "releases", "shiban.apk");
+  return {
+    version: release.version,
+    versionCode: Number(release.versionCode) || 0,
+    notes: Array.isArray(release.notes) ? release.notes : [],
+    apkUrl: "/api/app/download",
+    apkReady: fs.existsSync(apk),
+  };
+}
+
+function downloadApp(res) {
+  const file = path.join(root, "releases", "shiban.apk");
+  if (!file.startsWith(path.join(root, "releases")) || !fs.existsSync(file)) {
+    throw httpError(404, "安装包还没准备好");
+  }
+  const stat = fs.statSync(file);
+  res.writeHead(200, {
+    "Content-Type": "application/vnd.android.package-archive",
+    "Content-Length": stat.size,
+    "Content-Disposition": "attachment; filename=\"shiban.apk\"",
+    "Cache-Control": "no-cache",
+  });
+  fs.createReadStream(file).pipe(res);
 }
 
 function send(res, status, body) {

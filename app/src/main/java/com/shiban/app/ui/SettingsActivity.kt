@@ -8,6 +8,8 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.isVisible
 import com.shiban.app.BuildConfig
 import com.shiban.app.data.Account
+import com.shiban.app.data.AppUpdate
+import com.shiban.app.data.openChangelog
 import com.shiban.app.data.SettingsStore
 import com.shiban.app.data.Sync
 import com.shiban.app.databinding.ActivitySettingsBinding
@@ -41,6 +43,8 @@ class SettingsActivity : AppCompatActivity() {
         }
         binding.saveAi.setOnClickListener { saveAi() }
         binding.version.text = "识办 ${BuildConfig.VERSION_NAME}"
+        binding.changelog.setOnClickListener { openChangelog() }
+        binding.checkUpdate.setOnClickListener { checkUpdate() }
         binding.showPassword.setOnCheckedChangeListener { _, checked ->
             binding.password.inputType = if (checked) {
                 InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD
@@ -188,6 +192,30 @@ class SettingsActivity : AppCompatActivity() {
                 }
             } catch (error: Exception) {
                 Io.ui { toast(error.message ?: "修改失败") }
+            }
+        }
+    }
+
+    private fun checkUpdate() {
+        binding.checkUpdate.isEnabled = false
+        binding.updateStatus.text = "正在检查…"
+        Io.run {
+            try {
+                val release = AppUpdate.check(applicationContext)
+                Io.ui {
+                    binding.checkUpdate.isEnabled = true
+                    if (!AppUpdate.isNewer(release)) {
+                        binding.updateStatus.text = "已是最新版本"
+                        return@ui
+                    }
+                    binding.updateStatus.text = "发现 ${release.version}"
+                    AppUpdate.offer(this, release) { binding.updateStatus.text = it }
+                }
+            } catch (error: Exception) {
+                Io.ui {
+                    binding.checkUpdate.isEnabled = true
+                    binding.updateStatus.text = error.message ?: "检查失败"
+                }
             }
         }
     }

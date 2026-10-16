@@ -6,7 +6,7 @@
 - `desktop/`：Tauri 桌面端
 - `server/`：账号、同步和模型识别服务
 
-当前版本：**1.4.1**。安装包在 [Releases](https://github.com/uasier/shiban/releases)。
+当前版本：**1.4.3**。安装包在 [Releases](https://github.com/uasier/shiban/releases)。
 
 公网地址固定为 `http://154.36.168.192`。手机和桌面默认连这里，不用再填局域网地址。本机端口登记在 `大模型项目/端口登记`，本地进程仍占用 `40400-40499`。
 
@@ -29,7 +29,7 @@ node src/server.js
 ./gradlew assembleDebug
 ```
 
-真机和模拟器都默认连公网。只有要改用本机服务时，才把地址改成 `http://10.0.2.2:40400` 或电脑的局域网地址。
+真机和模拟器都默认连公网。只有要改用本机服务时，才把地址改成 `http://10.0.2.2:40400` 或电脑的局域网地址。设置里可以检查更新；新版本号写在 `server/release.json`，安装包放到服务端 `releases/shiban.apk`。
 
 ## 桌面端
 

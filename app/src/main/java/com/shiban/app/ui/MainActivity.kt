@@ -29,7 +29,9 @@ import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.snackbar.Snackbar
 import com.shiban.app.R
 import com.shiban.app.ai.Parser
+import com.shiban.app.data.AppUpdate
 import com.shiban.app.data.Backup
+import com.shiban.app.data.Changelog
 import com.shiban.app.data.Levels
 import com.shiban.app.data.SettingsStore
 import com.shiban.app.data.Sync
@@ -230,6 +232,7 @@ class MainActivity : AppCompatActivity() {
         })
         select(Filter.OPEN)
         handleShortcut(intent)
+        if (!Changelog.promptIfNeeded(this)) AppUpdate.promptIfNeeded(this)
     }
 
     override fun onNewIntent(intent: Intent) {
