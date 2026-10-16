@@ -220,6 +220,9 @@ button { cursor: pointer; }
 .seg button:last-child { border-right: 0; }
 .seg button.on { background: var(--blue); color: white; }
 .status { color: var(--muted); font-size: 13px; }
+.health { white-space: pre-line; font-size: 13px; line-height: 1.45; margin: 8px 0; color: var(--muted); }
+.health.ok { color: #248a3d; }
+.health.bad { color: var(--danger); }
 .drop {
   border: 1px dashed #ddd;
   border-radius: 16px;

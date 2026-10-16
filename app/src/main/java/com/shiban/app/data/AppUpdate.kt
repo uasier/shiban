@@ -27,18 +27,29 @@ object AppUpdate {
     )
 
     fun check(context: Context): Release {
-        val settings = SettingsStore(context)
-        val json = getJson(settings.serverUrl.trimEnd('/') + "/api/app")
-        val notes = json.optJSONArray("notes")
-        return Release(
-            version = json.optString("version").ifBlank { "未知版本" },
-            versionCode = json.optInt("versionCode"),
-            notes = List(notes?.length() ?: 0) { notes!!.optString(it) }.filter { it.isNotBlank() },
-            apkUrl = json.optString("apkUrl").ifBlank { "/api/app/download" }
-        )
+        val json = getJson(GITHUB_LATEST)
+        val version = json.optString("tag_name").removePrefix("v").ifBlank { "未知版本" }
+        val notes = json.optString("body")
+            .lineSequence()
+            .map { it.trim().removePrefix("-").removePrefix("*").trim() }
+            .filter { it.isNotBlank() && !it.startsWith("#") }
+            .take(6)
+            .toList()
+        val assets = json.optJSONArray("assets")
+        var apkUrl = ""
+        for (index in 0 until (assets?.length() ?: 0)) {
+            val asset = assets?.optJSONObject(index) ?: continue
+            val name = asset.optString("name")
+            if (name.endsWith(".apk", ignoreCase = true)) {
+                apkUrl = asset.optString("browser_download_url")
+                break
+            }
+        }
+        if (apkUrl.isBlank()) throw ApiException("GitHub 发布里没有 Android 安装包")
+        return Release(version, compareVersion(version, "0"), notes, apkUrl)
     }
 
-    fun isNewer(release: Release): Boolean = release.versionCode > BuildConfig.VERSION_CODE
+    fun isNewer(release: Release): Boolean = compareVersion(release.version, BuildConfig.VERSION_NAME) > 0
 
     fun promptIfNeeded(activity: AppCompatActivity) {
         val settings = SettingsStore(activity)
@@ -153,7 +164,8 @@ object AppUpdate {
             val raw = stream?.bufferedReader()?.use { it.readText() }.orEmpty()
             if (connection.responseCode !in 200..299) {
                 val message = try {
-                    JSONObject(raw).optString("error")
+                    val body = JSONObject(raw)
+                    body.optString("message").ifBlank { body.optString("error") }
                 } catch (_: Exception) {
                     ""
                 }
@@ -170,9 +182,23 @@ object AppUpdate {
             connectTimeout = 12_000
             readTimeout = 180_000
             instanceFollowRedirects = true
-            setRequestProperty("Accept", "application/json, application/vnd.android.package-archive")
+            setRequestProperty("Accept", "application/vnd.github+json, application/json, application/octet-stream")
+            setRequestProperty("User-Agent", "shiban")
         }
     }
 
+    private fun compareVersion(left: String, right: String): Int {
+        fun parts(value: String) = value.removePrefix("v").substringBefore("-").split(".").map { it.toIntOrNull() ?: 0 }
+        val a = parts(left)
+        val b = parts(right)
+        val count = maxOf(a.size, b.size)
+        for (index in 0 until count) {
+            val diff = a.getOrElse(index) { 0 } - b.getOrElse(index) { 0 }
+            if (diff != 0) return diff
+        }
+        return 0
+    }
+
+    private const val GITHUB_LATEST = "https://api.github.com/repos/uasier/shiban/releases/latest"
     private const val CHECK_INTERVAL = 12 * 60 * 60 * 1000L
 }

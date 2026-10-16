@@ -2930,7 +2930,7 @@ dependencies = [
 
 [[package]]
 name = "shiban"
-version = "1.4.0"
+version = "1.4.5"
 dependencies = [
  "arboard",
  "serde",

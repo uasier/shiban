@@ -267,7 +267,7 @@ class TodoStore private constructor(context: Context) {
         }
 
         override fun onOpen(db: SQLiteDatabase) {
-            db.execSQL("PRAGMA busy_timeout=3000")
+            db.rawQuery("PRAGMA busy_timeout=3000", null).close()
             db.execSQL("CREATE INDEX IF NOT EXISTS idx_todos_server_id ON todos(server_id)")
         }
     }

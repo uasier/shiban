@@ -43,6 +43,15 @@
                 android:text="分享一张图，变成一件事"
                 android:textColor="@color/muted"
                 android:textSize="13sp" />
+
+            <TextView
+                android:id="@+id/serverHealth"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:text="正在探活…"
+                android:textColor="@color/muted"
+                android:textSize="13sp" />
         </LinearLayout>
 
         <FrameLayout

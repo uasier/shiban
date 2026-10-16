@@ -38,11 +38,13 @@ import com.shiban.app.data.Sync
 import com.shiban.app.data.Todo
 import com.shiban.app.data.TodoStore
 import com.shiban.app.data.asDraft
+import com.shiban.app.net.ApiClient
 import com.shiban.app.net.ApiException
+import com.shiban.app.net.HealthReport
 import com.shiban.app.databinding.ActivityMainBinding
+import com.shiban.app.util.Io
 import com.shiban.app.reminder.Reminders
 import com.shiban.app.util.Images
-import com.shiban.app.util.Io
 import com.shiban.app.util.TimeFmt
 import com.shiban.app.util.toast
 
@@ -230,6 +232,7 @@ class MainActivity : AppCompatActivity() {
                 }
             }
         })
+        binding.serverHealth.setOnClickListener { probeServer() }
         select(Filter.OPEN)
         handleShortcut(intent)
         if (!Changelog.promptIfNeeded(this)) AppUpdate.promptIfNeeded(this)
@@ -246,7 +249,23 @@ class MainActivity : AppCompatActivity() {
         reload()
         binding.root.postDelayed({ maybeOfferClipboard() }, 400)
         refreshFromServer(manual = false)
+        probeServer()
         Io.run { Reminders.catchUp(applicationContext) }
+    }
+
+    private fun probeServer() {
+        binding.serverHealth.text = "正在探活…"
+        binding.serverHealth.setTextColor(ContextCompat.getColor(this, R.color.muted))
+        val url = SettingsStore(this).serverUrl
+        Io.run {
+            val report = ApiClient(SettingsStore(applicationContext)).probe(url)
+            Io.ui { if (!isFinishing) showHealth(report) }
+        }
+    }
+
+    private fun showHealth(report: HealthReport) {
+        binding.serverHealth.text = "${report.headline}\n${report.detail}"
+        binding.serverHealth.setTextColor(ContextCompat.getColor(this, if (report.ok) R.color.moss else R.color.danger))
     }
 
     private fun handleShortcut(intent: Intent) {

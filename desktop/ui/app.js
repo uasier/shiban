@@ -43,6 +43,9 @@ const state = {
   expandedId: null,
   busy: false,
   status: "",
+  health: "",
+  healthOk: null,
+  update: "",
 };
 
 const app = document.querySelector("#app");
@@ -129,6 +132,97 @@ window.addEventListener("focus", () => {
   if (state.token && state.view === "list") offerClipboard();
 });
 
+const DESKTOP_VERSION = "1.4.5";
+const GITHUB_LATEST = "https://api.github.com/repos/uasier/shiban/releases/latest";
+
+function compareVersion(left, right) {
+  const parts = (value) => String(value || "").replace(/^v/, "").split("-").at(0).split(".").map((item) => Number(item) || 0);
+  const a = parts(left);
+  const b = parts(right);
+  const count = Math.max(a.length, b.length);
+  for (let index = 0; index < count; index += 1) {
+    const diff = (a[index] || 0) - (b[index] || 0);
+    if (diff) return diff;
+  }
+  return 0;
+}
+
+async function checkDesktopUpdate() {
+  state.update = "正在从 GitHub 检查更新…";
+  render();
+  try {
+    const response = await fetch(GITHUB_LATEST, {
+      headers: { Accept: "application/vnd.github+json", "User-Agent": "shiban" },
+    });
+    if (!response.ok) throw new Error(`GitHub 返回 HTTP ${response.status}`);
+    const json = await response.json();
+    const version = String(json.tag_name || "").replace(/^v/, "");
+    const asset = (json.assets || []).find((item) => /\.(exe|msi)$/i.test(item.name));
+    if (compareVersion(version, DESKTOP_VERSION) <= 0) {
+      state.update = `GitHub 最新版是 ${version || "未知"}，当前 Windows 端已是最新。`;
+    } else if (!asset) {
+      state.update = `GitHub 有新版本 ${version}，但还没有 Windows 安装包。\n${json.html_url || ""}`;
+    } else {
+      state.update = `发现新版本 ${version}。请下载 Windows 安装包：\n${asset.browser_download_url}`;
+    }
+  } catch (error) {
+    state.update = `GitHub 检查更新失败：${error.message || "无法连接"}`;
+  }
+  render();
+}
+
+function healthClass() {
+  if (state.healthOk === true) return "ok";
+  if (state.healthOk === false) return "bad";
+  return "";
+}
+
+function currentServerInput() {
+  return document.querySelector("[name=server]")?.value || state.server;
+}
+
+async function probeServer(url) {
+  const target = String(url || currentServerInput() || "").trim().replace(/\/$/, "");
+  state.health = "正在探活…";
+  state.healthOk = null;
+  render();
+  if (!/^https?:\/\//i.test(target)) {
+    state.healthOk = false;
+    state.health = "服务端工作异常\n地址需要以 http:// 或 https:// 开头";
+    render();
+    return;
+  }
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 8000);
+  const started = Date.now();
+  try {
+    const response = await fetch(`${target}/api/health`, {
+      signal: controller.signal,
+      headers: { Accept: "application/json" },
+    });
+    const elapsed = Date.now() - started;
+    const json = await response.json().catch(() => null);
+    if (!response.ok) {
+      state.healthOk = false;
+      state.health = `服务端工作异常\n地址 ${target}\n已连通，但返回 HTTP ${response.status}\n耗时 ${elapsed} 毫秒`;
+    } else if (!json || json.ok !== true) {
+      state.healthOk = false;
+      state.health = `服务端工作异常\n地址 ${target}\n已连通，但不是正常的识办服务\n耗时 ${elapsed} 毫秒`;
+    } else {
+      const model = json.modelConfigured ? "模型已配置" : "模型密钥未配置，不影响登录和同步";
+      state.healthOk = true;
+      state.health = `服务端工作正常\n地址 ${target}\n${model}\n耗时 ${elapsed} 毫秒`;
+    }
+  } catch (error) {
+    state.healthOk = false;
+    const reason = error?.name === "AbortError" ? "连接超时，服务没有在时限内响应" : "无法连接";
+    state.health = `服务端工作异常\n地址 ${target}\n${reason}`;
+  } finally {
+    clearTimeout(timer);
+    render();
+  }
+}
+
 function render() {
   const focusId = document.activeElement?.id;
   const caret = document.activeElement?.selectionStart;
@@ -150,6 +244,10 @@ function loginView() {
         <div class="brand">识办</div>
         <p class="quiet">每个人注册后都有自己的待办空间。同一个账号可以在手机和桌面同时使用，看不到别人的内容。</p>
         <label class="field"><span>服务地址</span><input name="server" value="${escapeAttr(state.server)}" /></label>
+        <button class="ghost" id="probe" type="button">探活</button>
+        <button class="ghost" id="check-update" type="button">检查更新</button>
+        <p class="health ${healthClass()}">${escapeHtml(state.health || "尚未探活")}</p>
+        <p class="health">${escapeHtml(state.update || "安装包从 GitHub Releases 下载")}</p>
         <label class="field"><span>显示名</span><input name="displayName" value="${escapeAttr(state.displayName)}" placeholder="注册时填写" /></label>
         <label class="field"><span>用户名</span><input name="username" value="${escapeAttr(state.username)}" placeholder="2 到 24 个字符" /></label>
         <label class="field"><span>密码</span><input name="password" type="password" placeholder="至少 6 位" /></label>
@@ -176,6 +274,10 @@ function workspace() {
           ${chip("open", "待办", open.length)}${chip("today", "今天", open.filter((todo) => today(todo.timeMillis)).length)}${chip("must", "必须", open.filter((todo) => todo.necessity === "must").length)}${chip("overdue", "已过期", open.filter((todo) => todo.timeMillis && todo.timeMillis < Date.now()).length)}${chip("done", "已完成", state.todos.length - open.length)}
         </nav>
         <div class="side-foot">
+          <p class="health ${healthClass()}">${escapeHtml(state.health || "尚未探活")}</p>
+          <p class="health">${escapeHtml(state.update || "")}</p>
+          <button class="text-btn" id="probe" type="button">探活</button>
+          <button class="text-btn" id="check-update" type="button">检查更新</button>
           <button class="text-btn" id="more" type="button">更多</button>
           <div class="menu" id="menu" hidden>
             <button type="button" data-menu="new">详细新建</button>
@@ -270,6 +372,10 @@ function accountView() {
         <label class="field"><span>模型接口</span><input id="ai-url" value="${escapeAttr(state.ai.baseUrl)}" /></label>
         <label class="field"><span>模型名</span><input id="ai-model" value="${escapeAttr(state.ai.model)}" /></label>
         <label class="field"><span>API Key</span><input id="ai-key" type="password" value="${escapeAttr(state.ai.apiKey)}" placeholder="xai-..." /></label>
+        <button class="ghost" id="probe" type="button">探活</button>
+        <button class="ghost" id="check-update" type="button">检查更新</button>
+        <p class="health ${healthClass()}">${escapeHtml(state.health || "尚未探活")}</p>
+        <p class="health">${escapeHtml(state.update || "")}</p>
         <button class="btn" id="save-account">保存到账号</button>
         <p class="status">${escapeHtml(state.status)}</p>
       </div>
@@ -311,6 +417,12 @@ function bind() {
       if (!response.ok) return;
       image.src = URL.createObjectURL(await response.blob());
     } catch {}
+  });
+  document.querySelectorAll("#probe").forEach((button) => {
+    button.addEventListener("click", () => probeServer(currentServerInput()));
+  });
+  document.querySelectorAll("#check-update").forEach((button) => {
+    button.addEventListener("click", () => checkDesktopUpdate());
   });
   document.querySelector("#login-form")?.addEventListener("submit", (event) => auth(event, false));
   document.querySelector("#register")?.addEventListener("click", (event) => auth(event, true));
@@ -781,6 +893,7 @@ function escapeAttr(value) {
 
 localStorage.setItem("shiban.server", state.server);
 render();
+probeServer();
 if (state.token) loadTodos().catch((error) => {
   state.status = error.message;
   if (String(error.message).includes("登录")) state.token = "";

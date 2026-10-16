@@ -12,6 +12,20 @@ object Changelog {
 
     val releases = listOf(
         Release(
+            "1.4.5",
+            10,
+            listOf(
+                "手机和桌面都可以探活，并明确显示服务端是否工作正常。"
+            )
+        ),
+        Release(
+            "1.4.4",
+            9,
+            listOf(
+                "修复安装后打开闪退。"
+            )
+        ),
+        Release(
             "1.4.3",
             8,
             listOf(

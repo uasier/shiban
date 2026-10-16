@@ -5,12 +5,19 @@ import com.shiban.app.data.SettingsStore
 import com.shiban.app.data.TodoDraft
 import org.json.JSONObject
 import java.io.File
+import java.net.ConnectException
 import java.net.HttpURLConnection
 import java.net.SocketTimeoutException
 import java.net.URL
 import java.net.UnknownHostException
 
 class ApiException(message: String, val httpCode: Int = 0) : Exception(message)
+
+data class HealthReport(
+    val ok: Boolean,
+    val headline: String,
+    val detail: String
+)
 
 data class AiConfig(
     val baseUrl: String,
@@ -78,9 +85,52 @@ class ApiClient(private val settings: SettingsStore) {
         )
     }
 
-    fun health(): String {
-        val json = request("GET", "/api/health", null, auth = false)
-        return if (json.optBoolean("modelConfigured")) "服务可用，模型已配置" else "服务可用，但还没配置模型"
+    fun health(): String = probe(settings.serverUrl).headline
+
+    fun probe(serverUrl: String): HealthReport {
+        val base = serverUrl.trim().trimEnd('/')
+        if (!base.startsWith("http://") && !base.startsWith("https://")) {
+            return HealthReport(false, "服务端工作异常", "地址需要以 http:// 或 https:// 开头")
+        }
+        val started = System.currentTimeMillis()
+        return try {
+            val connection = (URL("$base/api/health").openConnection() as HttpURLConnection).apply {
+                requestMethod = "GET"
+                connectTimeout = 8_000
+                readTimeout = 8_000
+                instanceFollowRedirects = true
+                setRequestProperty("Accept", "application/json")
+            }
+            try {
+                val code = connection.responseCode
+                val elapsed = System.currentTimeMillis() - started
+                val stream = if (code in 200..299) connection.inputStream else connection.errorStream
+                val raw = stream?.bufferedReader()?.use { it.readText() }.orEmpty()
+                if (code !in 200..299) {
+                    return HealthReport(false, "服务端工作异常", "地址 $base\n已连通，但返回 HTTP $code\n耗时 $elapsed 毫秒")
+                }
+                val json = try {
+                    JSONObject(raw)
+                } catch (_: Exception) {
+                    return HealthReport(false, "服务端工作异常", "地址 $base\n已连通，但返回的不是识办服务\n耗时 $elapsed 毫秒")
+                }
+                if (!json.optBoolean("ok")) {
+                    return HealthReport(false, "服务端工作异常", "地址 $base\n服务有响应，但状态不是正常\n耗时 $elapsed 毫秒")
+                }
+                val model = if (json.optBoolean("modelConfigured")) "模型已配置" else "模型密钥未配置，不影响登录和同步"
+                HealthReport(true, "服务端工作正常", "地址 $base\n$model\n耗时 $elapsed 毫秒")
+            } finally {
+                connection.disconnect()
+            }
+        } catch (_: UnknownHostException) {
+            HealthReport(false, "服务端工作异常", "地址 $base\n无法解析服务器地址")
+        } catch (_: SocketTimeoutException) {
+            HealthReport(false, "服务端工作异常", "地址 $base\n连接超时，服务没有在时限内响应")
+        } catch (_: ConnectException) {
+            HealthReport(false, "服务端工作异常", "地址 $base\n连接被拒绝，服务可能没有启动")
+        } catch (error: Exception) {
+            HealthReport(false, "服务端工作异常", "地址 $base\n${error.message ?: "无法连接"}")
+        }
     }
 
     fun ingest(text: String?, imagePaths: List<String>): Int {

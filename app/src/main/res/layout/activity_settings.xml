@@ -91,6 +91,24 @@
                     android:textSize="12sp" />
 
                 <TextView
+                    android:id="@+id/serverHealth"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
+                    android:lineSpacingExtra="2dp"
+                    android:text="尚未探活"
+                    android:textColor="@color/ink"
+                    android:textSize="14sp" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/probeServer"
+                    style="@style/Widget.Shiban.Button.Outlined"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
+                    android:text="探活" />
+
+                <TextView
                     android:id="@+id/accountStatus"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"

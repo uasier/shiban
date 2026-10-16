@@ -82,7 +82,14 @@ server.listen(PORT, HOST, () => {
 async function route(req, res, url, user) {
   const { pathname } = url;
   if (req.method === "GET" && pathname === "/api/health") {
-    return send(res, 200, { ok: true, modelConfigured: Boolean(GROK_API_KEY), model: GROK_MODEL });
+    return send(res, 200, {
+      ok: true,
+      status: "up",
+      message: "服务端工作正常",
+      time: Date.now(),
+      modelConfigured: Boolean(GROK_API_KEY),
+      model: GROK_MODEL,
+    });
   }
   if (req.method === "GET" && pathname === "/api/app") return send(res, 200, appRelease());
   if (req.method === "GET" && pathname === "/api/app/download") return downloadApp(res);

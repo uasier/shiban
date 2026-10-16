@@ -5,8 +5,10 @@ import android.os.Bundle
 import android.text.InputType
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.content.ContextCompat
 import androidx.core.view.isVisible
 import com.shiban.app.BuildConfig
+import com.shiban.app.R
 import com.shiban.app.data.Account
 import com.shiban.app.data.AppUpdate
 import com.shiban.app.data.openChangelog
@@ -14,6 +16,7 @@ import com.shiban.app.data.SettingsStore
 import com.shiban.app.data.Sync
 import com.shiban.app.databinding.ActivitySettingsBinding
 import com.shiban.app.net.ApiClient
+import com.shiban.app.net.HealthReport
 import com.shiban.app.util.Io
 import com.shiban.app.util.toast
 
@@ -26,6 +29,8 @@ class SettingsActivity : AppCompatActivity() {
         binding = ActivitySettingsBinding.inflate(layoutInflater)
         setContentView(binding.root)
         binding.back.setOnClickListener { finish() }
+        binding.probeServer.setOnClickListener { probeServer() }
+        probeServer()
         binding.serverUrl.setText(settings.serverUrl)
         binding.username.setText(settings.username)
         binding.displayName.setText(settings.displayName)
@@ -194,6 +199,26 @@ class SettingsActivity : AppCompatActivity() {
                 Io.ui { toast(error.message ?: "修改失败") }
             }
         }
+    }
+
+    private fun probeServer() {
+        val url = binding.serverUrl.text?.toString().orEmpty()
+        binding.serverHealth.text = "正在探活…"
+        binding.serverHealth.setTextColor(ContextCompat.getColor(this, R.color.muted))
+        binding.probeServer.isEnabled = false
+        Io.run {
+            val report = ApiClient(SettingsStore(applicationContext)).probe(url)
+            Io.ui {
+                if (isFinishing) return@ui
+                showHealth(report)
+                binding.probeServer.isEnabled = true
+            }
+        }
+    }
+
+    private fun showHealth(report: HealthReport) {
+        binding.serverHealth.text = "${report.headline}\n${report.detail}"
+        binding.serverHealth.setTextColor(ContextCompat.getColor(this, if (report.ok) R.color.moss else R.color.danger))
     }
 
     private fun checkUpdate() {
