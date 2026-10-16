@@ -6,8 +6,15 @@ class SettingsStore(context: Context) {
     private val prefs = context.applicationContext.getSharedPreferences("shiban_settings", Context.MODE_PRIVATE)
 
     var serverUrl: String
-        get() = prefs.getString(KEY_SERVER, DEFAULT_SERVER).orEmpty().ifBlank { DEFAULT_SERVER }
-        set(value) = prefs.edit().putString(KEY_SERVER, value.trim().trimEnd('/')).apply()
+        get() {
+            val saved = prefs.getString(KEY_SERVER, "").orEmpty()
+            val resolved = normalizeServer(saved)
+            if (resolved != saved.trim().trimEnd('/')) {
+                prefs.edit().putString(KEY_SERVER, resolved).apply()
+            }
+            return resolved
+        }
+        set(value) = prefs.edit().putString(KEY_SERVER, normalizeServer(value)).apply()
 
     var token: String
         get() = prefs.getString(KEY_TOKEN, "").orEmpty()
@@ -59,9 +66,25 @@ class SettingsStore(context: Context) {
     }
 
     companion object {
-        const val DEFAULT_SERVER = "http://10.0.2.2:8787"
+        const val PUBLIC_SERVER = "http://154.36.168.192"
+        const val DEFAULT_SERVER = PUBLIC_SERVER
         const val DEFAULT_AI_URL = "https://api.x.ai/v1"
         const val DEFAULT_AI_MODEL = "grok-4.7"
+
+        fun normalizeServer(value: String?): String {
+            val raw = value.orEmpty().trim().trimEnd('/')
+            if (raw.isBlank() || isLocalServer(raw)) return PUBLIC_SERVER
+            return raw
+        }
+
+        private fun isLocalServer(value: String): Boolean {
+            val authority = value.substringAfter("://", value).substringBefore('/').lowercase()
+            val host = authority.substringBefore(':')
+            val port = authority.substringAfter(':', "")
+            if (host == "localhost" || host == "127.0.0.1" || host == "10.0.2.2" || host == "0.0.0.0") return true
+            if (host.startsWith("192.168.") || host.startsWith("10.")) return true
+            return port == "8787" || port == "18787" || port == "40400"
+        }
 
         private const val KEY_SERVER = "server_url"
         private const val KEY_TOKEN = "token"

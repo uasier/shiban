@@ -1,5 +1,25 @@
+const PUBLIC_SERVER = "http://154.36.168.192";
+
+function normalizeServer(value) {
+  const raw = String(value || "").trim().replace(/\/$/, "");
+  if (!raw) return PUBLIC_SERVER;
+  try {
+    const url = new URL(raw);
+    const host = url.hostname;
+    const local = host === "localhost"
+      || host === "127.0.0.1"
+      || host === "10.0.2.2"
+      || host.startsWith("192.168.")
+      || host.startsWith("10.")
+      || ["8787", "18787", "40400"].includes(url.port);
+    return local ? PUBLIC_SERVER : raw;
+  } catch {
+    return PUBLIC_SERVER;
+  }
+}
+
 const state = {
-  server: localStorage.getItem("shiban.server") || "http://127.0.0.1:8787",
+  server: normalizeServer(localStorage.getItem("shiban.server")),
   token: localStorage.getItem("shiban.token") || "",
   username: localStorage.getItem("shiban.user") || "",
   userId: localStorage.getItem("shiban.userId") || "",
@@ -759,6 +779,7 @@ function escapeAttr(value) {
   return escapeHtml(value);
 }
 
+localStorage.setItem("shiban.server", state.server);
 render();
 if (state.token) loadTodos().catch((error) => {
   state.status = error.message;

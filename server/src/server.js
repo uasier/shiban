@@ -8,9 +8,19 @@ import { fileURLToPath } from "node:url";
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 loadEnv(path.join(root, ".env"));
 
-const PORT = Number(process.env.PORT || 8787);
+const PORT = Number(process.env.PORT || 40400);
 const HOST = process.env.HOST || "0.0.0.0";
-const JWT_SECRET = process.env.JWT_SECRET || "shiban-dev-secret-change-me";
+const JWT_SECRET = (process.env.JWT_SECRET || "").trim();
+const BLOCKED_SECRETS = new Set([
+  "",
+  "please-change-this-secret",
+  "shiban-dev-secret-change-me",
+  "replace-with-a-long-random-secret",
+]);
+if (BLOCKED_SECRETS.has(JWT_SECRET) || JWT_SECRET.length < 24) {
+  console.error("请在 .env 设置独立的 JWT_SECRET，不要使用示例值");
+  process.exit(1);
+}
 const GROK_API_KEY = (process.env.GROK_API_KEY || "").trim();
 const GROK_BASE_URL = (process.env.GROK_BASE_URL || "https://api.x.ai/v1").replace(/\/$/, "");
 const GROK_MODEL = process.env.GROK_MODEL || "grok-4.7";
