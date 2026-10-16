@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">识办</string>
+    <string name="share_target">存为待办</string>
+    <string name="shortcut_add">新建待办</string>
+    <string name="widget_desc">未完成的待办，点圆圈就能完成</string>
+    <string name="cd_settings">设置</string>
+    <string name="cd_album">从相册识别</string>
+    <string name="cd_add">新建待办</string>
+</resources>

@@ -1,0 +1,10 @@
+{
+  "name": "shiban-server",
+  "version": "1.4.0",
+  "private": true,
+  "type": "module",
+  "description": "识办服务端：账号、待办同步、Grok 识别",
+  "scripts": {
+    "start": "node src/server.js"
+  }
+}

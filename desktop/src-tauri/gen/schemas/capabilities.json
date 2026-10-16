@@ -1,0 +1,1 @@
+{"default":{"identifier":"default","description":"识办桌面端默认权限","local":true,"windows":["main"],"permissions":["core:default","allow-read-clipboard"]}}

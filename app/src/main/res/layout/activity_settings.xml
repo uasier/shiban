@@ -1,0 +1,292 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/paper"
+    android:fitsSystemWindows="true"
+    android:orientation="vertical">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="56dp"
+        android:gravity="center_vertical"
+        android:paddingLeft="8dp"
+        android:paddingRight="16dp">
+
+        <TextView
+            android:id="@+id/back"
+            style="@style/ShibanBack"
+            android:text="返回" />
+
+        <TextView
+            style="@style/ShibanTitle"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:gravity="center"
+            android:text="账号" />
+
+        <View
+            android:layout_width="52dp"
+            android:layout_height="1dp" />
+    </LinearLayout>
+
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:background="@color/line" />
+
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="16dp">
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="@drawable/bg_card"
+                android:lineSpacingExtra="3dp"
+                android:padding="16dp"
+                android:text="识别和待办都由识办服务处理。Grok 的密钥只放在服务端，手机和桌面登录同一个账号即可同步。"
+                android:textColor="@color/ink"
+                android:textSize="13sp" />
+
+            <TextView
+                style="@style/ShibanSection"
+                android:text="服务" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:background="@drawable/bg_card"
+                android:orientation="vertical"
+                android:padding="16dp">
+
+                <TextView
+                    style="@style/ShibanLabel"
+                    android:layout_marginTop="0dp"
+                    android:text="服务地址" />
+
+                <android.widget.EditText
+                    android:id="@+id/serverUrl"
+                    style="@style/Widget.Shiban.Field"
+                    android:hint="http://10.0.2.2:8787"
+                    android:inputType="textUri"
+                    android:textSize="14sp" />
+
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:lineSpacingExtra="2dp"
+                    android:text="模拟器用 10.0.2.2。真机请填电脑的局域网地址，例如 http://192.168.1.8:8787"
+                    android:textColor="@color/muted"
+                    android:textSize="12sp" />
+
+                <TextView
+                    android:id="@+id/accountStatus"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="14dp"
+                    android:textColor="@color/ink"
+                    android:textSize="14sp" />
+
+                <TextView
+                    style="@style/ShibanLabel"
+                    android:text="显示名" />
+
+                <android.widget.EditText
+                    android:id="@+id/displayName"
+                    style="@style/Widget.Shiban.Field"
+                    android:hint="别人看不到，只在你自己的设备上显示"
+                    android:inputType="textPersonName"
+                    android:textSize="15sp" />
+
+                <TextView
+                    style="@style/ShibanLabel"
+                    android:text="用户名" />
+
+                <android.widget.EditText
+                    android:id="@+id/username"
+                    style="@style/Widget.Shiban.Field"
+                    android:hint="你的名字"
+                    android:inputType="text"
+                    android:textSize="15sp" />
+
+                <TextView
+                    style="@style/ShibanLabel"
+                    android:text="密码" />
+
+                <android.widget.EditText
+                    android:id="@+id/password"
+                    style="@style/Widget.Shiban.Field"
+                    android:hint="至少 6 位"
+                    android:inputType="textPassword"
+                    android:textSize="15sp" />
+
+                <androidx.appcompat.widget.AppCompatCheckBox
+                    android:id="@+id/showPassword"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="4dp"
+                    android:text="显示密码"
+                    android:textColor="@color/ink"
+                    app:buttonTint="@color/ink" />
+
+                <TextView
+                    android:id="@+id/status"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:textColor="@color/muted"
+                    android:textSize="13sp"
+                    android:visibility="gone" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/login"
+                    style="@style/Widget.Shiban.Button"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="16dp"
+                    android:text="登录" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/register"
+                    style="@style/Widget.Shiban.Button.Outlined"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:text="注册并登录" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/saveProfile"
+                    style="@style/Widget.Shiban.Button.Outlined"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:text="保存显示名"
+                    android:visibility="gone" />
+
+                <TextView
+                    style="@style/ShibanLabel"
+                    android:text="修改密码" />
+
+                <android.widget.EditText
+                    android:id="@+id/oldPassword"
+                    style="@style/Widget.Shiban.Field"
+                    android:hint="当前密码"
+                    android:inputType="textPassword"
+                    android:textSize="15sp" />
+
+                <android.widget.EditText
+                    android:id="@+id/newPassword"
+                    style="@style/Widget.Shiban.Field"
+                    android:hint="新密码，至少 6 位"
+                    android:inputType="textPassword"
+                    android:textSize="15sp" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/changePassword"
+                    style="@style/Widget.Shiban.Button.Outlined"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:text="修改密码"
+                    android:visibility="gone" />
+
+                <LinearLayout
+                    android:id="@+id/aiSection"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:visibility="gone">
+
+                    <TextView
+                        style="@style/ShibanLabel"
+                        android:text="识别模型，随账号同步" />
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="4dp"
+                        android:text="密钥只属于这个账号。换手机或打开桌面端登录后会自动带上，其他用户看不到。"
+                        android:textColor="@color/muted"
+                        android:textSize="12sp" />
+
+                    <TextView
+                        style="@style/ShibanLabel"
+                        android:text="接口地址" />
+
+                    <android.widget.EditText
+                        android:id="@+id/aiBaseUrl"
+                        style="@style/Widget.Shiban.Field"
+                        android:hint="https://api.x.ai/v1"
+                        android:inputType="textUri"
+                        android:textSize="14sp" />
+
+                    <TextView
+                        style="@style/ShibanLabel"
+                        android:text="模型名" />
+
+                    <android.widget.EditText
+                        android:id="@+id/aiModel"
+                        style="@style/Widget.Shiban.Field"
+                        android:hint="grok-4.7"
+                        android:inputType="text"
+                        android:textSize="14sp" />
+
+                    <TextView
+                        style="@style/ShibanLabel"
+                        android:text="API Key" />
+
+                    <android.widget.EditText
+                        android:id="@+id/aiApiKey"
+                        style="@style/Widget.Shiban.Field"
+                        android:hint="xai-..."
+                        android:inputType="textPassword"
+                        android:textSize="14sp" />
+
+                    <androidx.appcompat.widget.AppCompatCheckBox
+                        android:id="@+id/showAiKey"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="显示密钥"
+                        android:textColor="@color/ink"
+                        app:buttonTint="@color/ink" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/saveAi"
+                        style="@style/Widget.Shiban.Button"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="8dp"
+                        android:text="保存到账号" />
+                </LinearLayout>
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/logout"
+                    style="@style/Widget.Shiban.Button.Text"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="退出登录"
+                    android:visibility="gone" />
+            </LinearLayout>
+
+            <TextView
+                android:id="@+id/version"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="18dp"
+                android:gravity="center"
+                android:textColor="@color/muted"
+                android:textSize="12sp" />
+        </LinearLayout>
+    </ScrollView>
+</LinearLayout>

@@ -1,0 +1,4 @@
+[[permission]]
+identifier = "allow-read-clipboard"
+description = "允许读取剪贴板文字"
+commands.allow = ["read_clipboard"]
