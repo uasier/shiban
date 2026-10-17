@@ -123,9 +123,11 @@ class TodoAdapter(
             val first = row.first
             val last = row.last
             val context = binding.root.context
-            val radius = 16f * context.resources.displayMetrics.density
+            val density = context.resources.displayMetrics.density
+            val radius = 16f * density
             binding.root.background = GradientDrawable().apply {
                 setColor(ContextCompat.getColor(context, R.color.card))
+                setStroke((0.8f * density).toInt().coerceAtLeast(1), ContextCompat.getColor(context, R.color.line))
                 cornerRadii = floatArrayOf(
                     if (first) radius else 0f, if (first) radius else 0f,
                     if (first) radius else 0f, if (first) radius else 0f,
@@ -142,7 +144,7 @@ class TodoAdapter(
                 binding.content.paintFlags and Paint.STRIKE_THRU_TEXT_FLAG.inv()
             }
             binding.content.setTextColor(ContextCompat.getColor(context, if (done) R.color.muted else R.color.ink))
-            binding.root.alpha = if (done) 0.62f else 1f
+            binding.root.alpha = if (done) 0.55f else 1f
 
             val snoozeAt = Reminders.activeSnooze(context, todo.id)
             val meta = TimeFmt.metaLine(todo.timeMillis, todo.timeText, todo.location, snoozeAt)
@@ -158,12 +160,12 @@ class TodoAdapter(
             binding.bar.isVisible = marked
             if (marked) {
                 binding.bar.background = GradientDrawable().apply {
-                    cornerRadius = 99f * context.resources.displayMetrics.density
-                    setColor(ContextCompat.getColor(context, if (overdue) R.color.danger else R.color.ink))
+                    cornerRadius = 99f * density
+                    setColor(ContextCompat.getColor(context, if (overdue) R.color.danger else R.color.seal))
                 }
             }
-            badge(binding.importance, "重要性 ${Levels.importanceLabel(todo.importance)}", todo.importance == Levels.HIGH)
-            badge(binding.necessity, Levels.necessityLabel(todo.necessity), todo.necessity == Levels.MUST)
+            badge(binding.importance, "重要性 ${Levels.importanceLabel(todo.importance)}", todo.importance == Levels.HIGH, false)
+            badge(binding.necessity, Levels.necessityLabel(todo.necessity), todo.necessity == Levels.MUST, true)
 
             binding.check.setOnClickListener(null)
             binding.check.isChecked = done
@@ -200,14 +202,19 @@ class TodoAdapter(
             }
         }
 
-        private fun badge(view: TextView, label: String, strong: Boolean) {
+        private fun badge(view: TextView, label: String, strong: Boolean, isNecessity: Boolean) {
             val context = view.context
             view.text = label
-            view.setTextColor(ContextCompat.getColor(context, if (strong) R.color.ink else R.color.muted))
             val density = context.resources.displayMetrics.density
+            val (bgColor, textColor) = when {
+                strong && isNecessity -> R.color.seal_soft to R.color.seal
+                strong && !isNecessity -> R.color.warning_soft to R.color.warning
+                else -> R.color.paper_deep to R.color.ink_secondary
+            }
+            view.setTextColor(ContextCompat.getColor(context, textColor))
             view.background = GradientDrawable().apply {
                 cornerRadius = 99f * density
-                setColor(ContextCompat.getColor(context, if (strong) R.color.seal_soft else R.color.ink_soft))
+                setColor(ContextCompat.getColor(context, bgColor))
             }
             val horizontal = (8 * density).toInt()
             val vertical = (3 * density).toInt()

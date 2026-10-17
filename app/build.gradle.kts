@@ -11,8 +11,8 @@ android {
         applicationId = "com.shiban.app"
         minSdk = 26
         targetSdk = 34
-        versionCode = 10
-        versionName = "1.4.5"
+        versionCode = 19
+        versionName = "1.5.0"
     }
 
     buildTypes {

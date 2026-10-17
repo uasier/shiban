@@ -134,7 +134,7 @@ window.addEventListener("focus", () => {
   if (state.token && state.view === "list") offerClipboard();
 });
 
-const DESKTOP_VERSION = "1.4.9";
+const DESKTOP_VERSION = "1.5.0";
 const GITHUB_LATEST = "https://api.github.com/repos/uasier/shiban/releases/latest";
 
 function compareVersion(left, right) {
@@ -240,6 +240,7 @@ function loginView() {
           <button class="btn" type="submit">登录</button>
           <button class="ghost" type="button" id="register">注册并登录</button>
         </div>
+        <button class="ghost" type="button" id="github">使用 GitHub 登录</button>
         <p class="status">${escapeHtml(state.status)}</p>
       </form>
     </main>`;
@@ -351,10 +352,16 @@ function accountView() {
         <label class="field"><span>显示名</span><input id="profile-name" value="${escapeAttr(state.displayName)}" /></label>
         <label class="field"><span>当前密码</span><input id="old-password" type="password" /></label>
         <label class="field"><span>新密码</span><input id="new-password" type="password" placeholder="留空则不修改" /></label>
+        <div class="row">
+          <button class="ghost" type="button" id="preset-grok">Grok</button>
+          <button class="ghost" type="button" id="preset-deepseek">DeepSeek</button>
+        </div>
+        <p class="quiet">DeepSeek 只识别文字，图片请用 Grok。</p>
         <label class="field"><span>模型接口</span><input id="ai-url" value="${escapeAttr(state.ai.baseUrl)}" /></label>
         <label class="field"><span>模型名</span><input id="ai-model" value="${escapeAttr(state.ai.model)}" /></label>
-        <label class="field"><span>API Key</span><input id="ai-key" type="password" value="${escapeAttr(state.ai.apiKey)}" placeholder="xai-..." /></label>
+        <label class="field"><span>API Key</span><input id="ai-key" type="password" value="${escapeAttr(state.ai.apiKey)}" placeholder="${/deepseek/i.test(state.ai.baseUrl) ? "sk-..." : "xai-..."}" /></label>
         <button class="btn" id="save-account">保存到账号</button>
+        <button class="ghost" type="button" id="github-bind">绑定 GitHub</button>
         <p class="status">${escapeHtml(state.status)}</p>
       </div>
     </div>`;
@@ -404,6 +411,8 @@ function bind() {
   });
   document.querySelector("#login-form")?.addEventListener("submit", (event) => auth(event, false));
   document.querySelector("#register")?.addEventListener("click", (event) => auth(event, true));
+  document.querySelector("#github")?.addEventListener("click", () => githubAuth(false));
+  document.querySelector("#github-bind")?.addEventListener("click", () => githubAuth(true));
   document.querySelector("#logout")?.addEventListener("click", () => {
     state.token = "";
     state.userId = "";
@@ -420,6 +429,8 @@ function bind() {
   document.querySelector("#menu")?.addEventListener("click", (event) => event.stopPropagation());
   document.addEventListener("click", () => document.querySelector("#menu")?.setAttribute("hidden", ""), { once: true });
   document.querySelector("#save-account")?.addEventListener("click", saveAccount);
+  document.querySelector("#preset-grok")?.addEventListener("click", () => applyAiPreset(false));
+  document.querySelector("#preset-deepseek")?.addEventListener("click", () => applyAiPreset(true));
   document.querySelectorAll("[data-filter]").forEach((button) => {
     button.addEventListener("click", () => {
       state.filter = button.dataset.filter;
@@ -493,6 +504,49 @@ function bind() {
       render();
     });
   });
+}
+
+async function githubAuth(bind) {
+  state.status = bind ? "正在打开 GitHub…" : "正在打开 GitHub…";
+  render();
+  try {
+    const start = await api(`/api/auth/github/start${bind ? "?bind=1" : ""}`);
+    await openExternal(start.authUrl);
+    state.status = "请在浏览器完成 GitHub 授权";
+    render();
+    for (let attempt = 0; attempt < 90; attempt += 1) {
+      await new Promise((resolve) => setTimeout(resolve, 2000));
+      const data = await api(`/api/auth/github/poll?id=${encodeURIComponent(start.pollId)}`);
+      if (data.pending) continue;
+      const previous = state.userId;
+      state.token = data.token;
+      state.username = data.user.username;
+      state.userId = data.user.id;
+      state.displayName = data.user.displayName;
+      if (data.user.ai) state.ai = data.user.ai;
+      if (!bind && previous && previous !== state.userId) state.todos = [];
+      saveSession();
+      state.status = bind ? "已绑定 GitHub" : "";
+      if (bind) {
+        render();
+        return;
+      }
+      await loadTodos();
+      return;
+    }
+    throw new Error("GitHub 登录超时");
+  } catch (error) {
+    state.status = error.message;
+    render();
+  }
+}
+
+async function openExternal(url) {
+  if (window.__TAURI__?.core?.invoke) {
+    await window.__TAURI__.core.invoke("open_url", { url });
+    return;
+  }
+  window.open(url, "_blank");
 }
 
 async function auth(event, register) {
@@ -763,6 +817,17 @@ async function parseFiles(files) {
   }
   if (!images.length) return;
   await ingestQuiet({ images });
+}
+
+function applyAiPreset(deepseek) {
+  state.ai = {
+    ...state.ai,
+    baseUrl: deepseek ? "https://api.deepseek.com" : "https://api.x.ai/v1",
+    model: deepseek ? "deepseek-chat" : "grok-4.7",
+    apiKey: "",
+  };
+  state.status = deepseek ? "已切换到 DeepSeek，请填写它的密钥" : "已切换到 Grok，请填写它的密钥";
+  render();
 }
 
 async function saveAccount() {

@@ -5,9 +5,9 @@
             <solid android:color="@color/line" />
         </shape>
     </item>
-    <item android:top="1dp">
+    <item android:top="0.8dp">
         <shape>
-            <solid android:color="@color/paper" />
+            <solid android:color="@color/card" />
         </shape>
     </item>
 </layer-list>

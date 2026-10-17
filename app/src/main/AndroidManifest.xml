@@ -80,6 +80,18 @@
             android:windowSoftInputMode="adjustResize" />
 
         <activity
+            android:name=".ui.ModulesActivity"
+            android:exported="false" />
+
+        <activity
+            android:name=".ui.CaptureActivity"
+            android:exported="false" />
+
+        <activity
+            android:name=".ui.DataActivity"
+            android:exported="false" />
+
+        <activity
             android:name=".ui.ChangelogActivity"
             android:exported="false" />
 

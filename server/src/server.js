@@ -107,6 +107,12 @@ async function route(req, res, url, user) {
   if (req.method === "GET" && pathname === "/api/app/download") return downloadApp(res);
   if (req.method === "POST" && pathname === "/api/auth/register") return register(req, res);
   if (req.method === "POST" && pathname === "/api/auth/login") return login(req, res);
+  if (req.method === "GET" && pathname === "/api/auth/github/start") return githubStart(req, res, url);
+  if (req.method === "GET" && pathname === "/api/auth/github/poll") return githubPoll(res, url);
+  if (req.method === "GET" && pathname === "/api/auth/github/callback") return githubCallback(res, url);
+  if (req.method === "GET" && pathname === "/setup/github") return githubSetupPage(res);
+  if (req.method === "GET" && pathname === "/api/auth/github/setup") return githubSetup(res, url);
+  if (req.method === "POST" && pathname === "/api/github/hook") return send(res, 200, { ok: true });
   if (!user) return send(res, 401, { error: "请先登录" });
   if (req.method === "GET" && pathname === "/api/me") return send(res, 200, publicUser(user));
   if (req.method === "PATCH" && pathname === "/api/me") return updateProfile(req, res, user);
@@ -157,6 +163,213 @@ function login(req, res) {
     clearFailures(attemptKey);
     send(res, 200, { token: signToken(row), user: publicUser(row) });
   });
+}
+
+const githubPolls = new Map();
+
+function githubConfig() {
+  return {
+    clientId: process.env.GITHUB_CLIENT_ID || "",
+    clientSecret: process.env.GITHUB_CLIENT_SECRET || "",
+    callbackUrl: process.env.GITHUB_CALLBACK_URL || "https://shiban.uasier.com/api/auth/github/callback",
+  };
+}
+
+function githubReady() {
+  const cfg = githubConfig();
+  return Boolean(cfg.clientId && cfg.clientSecret);
+}
+
+function pruneGithubPolls() {
+  const now = Date.now();
+  for (const [id, item] of githubPolls) {
+    if (now - item.created > 10 * 60 * 1000) githubPolls.delete(id);
+  }
+}
+
+function githubStart(req, res, url) {
+  if (!githubReady()) throw httpError(503, "GitHub 登录还没配置");
+  pruneGithubPolls();
+  const bind = url.searchParams.get("bind") === "1";
+  const bindUser = bind ? readUser(req) : null;
+  if (bind && !bindUser) throw httpError(401, "请先登录再绑定 GitHub");
+  const pollId = crypto.randomBytes(24).toString("base64url");
+  const state = crypto.randomBytes(24).toString("base64url");
+  githubPolls.set(pollId, { state, created: Date.now(), bindUserId: bindUser?.id || "" });
+  const cfg = githubConfig();
+  const authUrl = new URL("https://github.com/login/oauth/authorize");
+  authUrl.searchParams.set("client_id", cfg.clientId);
+  authUrl.searchParams.set("redirect_uri", cfg.callbackUrl);
+  authUrl.searchParams.set("scope", "read:user");
+  authUrl.searchParams.set("state", state);
+  authUrl.searchParams.set("allow_signup", "true");
+  send(res, 200, { authUrl: authUrl.toString(), pollId });
+}
+
+function githubPoll(res, url) {
+  pruneGithubPolls();
+  const id = url.searchParams.get("id") || "";
+  const item = githubPolls.get(id);
+  if (!item) throw httpError(404, "登录已过期，请重试");
+  if (item.error) {
+    githubPolls.delete(id);
+    throw httpError(401, item.error);
+  }
+  if (!item.session) return send(res, 200, { pending: true });
+  githubPolls.delete(id);
+  send(res, 200, item.session);
+}
+
+async function githubCallback(res, url) {
+  const state = url.searchParams.get("state") || "";
+  const code = url.searchParams.get("code") || "";
+  const item = [...githubPolls.values()].find((entry) => entry.state === state);
+  try {
+    if (!item) throw new Error("登录已过期，请回到识办重试");
+    if (!code) throw new Error(url.searchParams.get("error_description") || "GitHub 没有返回授权");
+    const accessToken = await exchangeGithubCode(code);
+    const profile = await githubProfile(accessToken);
+    const row = item.bindUserId ? bindGithubUser(item.bindUserId, profile) : upsertGithubUser(profile);
+    item.session = { token: signToken(row), user: publicUser(row) };
+    sendHtml(res, 200, githubDonePage("登录成功", "可以回到识办了。"));
+  } catch (error) {
+    if (item) item.error = error.message || "GitHub 登录失败";
+    sendHtml(res, 400, githubDonePage("登录失败", error.message || "GitHub 登录失败"));
+  }
+}
+
+function githubSetupPage(res) {
+  if (githubReady()) {
+    return sendHtml(res, 200, githubDonePage("已经接入", "GitHub 登录已经可以用了。"));
+  }
+  const manifest = {
+    name: "Shiban",
+    url: "https://shiban.uasier.com",
+    hook_attributes: { url: "https://shiban.uasier.com/api/github/hook" },
+    redirect_url: "https://shiban.uasier.com/api/auth/github/setup",
+    callback_urls: [
+      "https://shiban.uasier.com/api/auth/github/callback",
+      "https://shiban.uasier.com:40400/api/auth/github/callback",
+    ],
+    public: true,
+    default_permissions: { metadata: "read", emails: "read" },
+    request_oauth_on_install: true,
+  };
+  const html = `<!doctype html><html lang="zh"><head><meta charset="utf-8"><title>接入 GitHub</title></head><body>
+<p>正在打开 GitHub，请用你的账号确认创建识办登录应用。</p>
+<form id="setup" action="https://github.com/settings/apps/new" method="post">
+<input type="hidden" name="manifest">
+</form>
+<script>
+document.querySelector("input").value = ${JSON.stringify(JSON.stringify(manifest))};
+document.querySelector("#setup").submit();
+</script></body></html>`;
+  sendHtml(res, 200, html);
+}
+
+async function githubSetup(res, url) {
+  if (githubReady()) return sendHtml(res, 200, githubDonePage("已经接入", "GitHub 登录已经可以用了。"));
+  const code = url.searchParams.get("code") || "";
+  if (!code) return sendHtml(res, 400, githubDonePage("没有完成", "GitHub 没有返回授权码。"));
+  const response = await fetch(`https://api.github.com/app-manifests/${code}/conversions`, {
+    method: "POST",
+    headers: { Accept: "application/vnd.github+json", "User-Agent": "shiban" },
+  });
+  const body = await response.json().catch(() => ({}));
+  if (!response.ok || !body.client_id || !body.client_secret) {
+    return sendHtml(res, 400, githubDonePage("接入失败", body.message || "GitHub 没有返回应用凭证"));
+  }
+  writeEnv({
+    GITHUB_CLIENT_ID: body.client_id,
+    GITHUB_CLIENT_SECRET: body.client_secret,
+    GITHUB_CALLBACK_URL: "https://shiban.uasier.com/api/auth/github/callback",
+  });
+  sendHtml(res, 200, githubDonePage("接入完成", "现在可以在识办里使用 GitHub 登录。"));
+}
+
+async function exchangeGithubCode(code) {
+  const cfg = githubConfig();
+  const response = await fetch("https://github.com/login/oauth/access_token", {
+    method: "POST",
+    headers: { Accept: "application/json", "Content-Type": "application/json", "User-Agent": "shiban" },
+    body: JSON.stringify({
+      client_id: cfg.clientId,
+      client_secret: cfg.clientSecret,
+      code,
+      redirect_uri: cfg.callbackUrl,
+    }),
+  });
+  const body = await response.json().catch(() => ({}));
+  if (!response.ok || !body.access_token) throw new Error(body.error_description || "GitHub 授权失败");
+  return body.access_token;
+}
+
+async function githubProfile(accessToken) {
+  const response = await fetch("https://api.github.com/user", {
+    headers: {
+      Accept: "application/vnd.github+json",
+      Authorization: `Bearer ${accessToken}`,
+      "User-Agent": "shiban",
+    },
+  });
+  const body = await response.json().catch(() => ({}));
+  if (!response.ok || !body.id || !body.login) throw new Error(body.message || "读不到 GitHub 账号");
+  return body;
+}
+
+function upsertGithubUser(profile) {
+  const githubId = String(profile.id);
+  const existing = db.prepare("SELECT * FROM users WHERE github_id = ?").get(githubId);
+  if (existing) return existing;
+  const username = availableGithubUsername(profile.login);
+  const id = crypto.randomUUID();
+  const displayName = validateDisplayName(String(profile.name || profile.login).slice(0, 24), username);
+  db.prepare(
+    "INSERT INTO users (id, username, username_key, display_name, password_hash, github_id, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)"
+  ).run(id, username, usernameKey(username), displayName, hashPassword(crypto.randomBytes(24).toString("base64url")), githubId, Date.now());
+  return db.prepare("SELECT * FROM users WHERE id = ?").get(id);
+}
+
+function bindGithubUser(userId, profile) {
+  const githubId = String(profile.id);
+  const taken = db.prepare("SELECT id FROM users WHERE github_id = ? AND id != ?").get(githubId, userId);
+  if (taken) throw new Error("这个 GitHub 账号已经绑定了别的识办账号");
+  db.prepare("UPDATE users SET github_id = ? WHERE id = ?").run(githubId, userId);
+  return db.prepare("SELECT * FROM users WHERE id = ?").get(userId);
+}
+
+function availableGithubUsername(login) {
+  const cleaned = String(login || "").replace(/[^a-zA-Z0-9_]/g, "").slice(0, 20) || "github";
+  const candidates = [cleaned, `gh_${cleaned}`.slice(0, 24)];
+  for (const name of candidates) {
+    if (!db.prepare("SELECT id FROM users WHERE username_key = ?").get(usernameKey(name))) return name;
+  }
+  return `gh_${cleaned.slice(0, 12)}_${crypto.randomBytes(2).toString("hex")}`.slice(0, 24);
+}
+
+function writeEnv(updates) {
+  const file = path.join(root, ".env");
+  const lines = fs.existsSync(file) ? fs.readFileSync(file, "utf8").split(/\r?\n/) : [];
+  const keys = new Set(Object.keys(updates));
+  const next = lines.filter((line) => !keys.has(line.split("=")[0]?.trim()));
+  for (const [key, value] of Object.entries(updates)) {
+    process.env[key] = value;
+    next.push(`${key}=${value}`);
+  }
+  fs.writeFileSync(file, `${next.filter((line) => line.trim()).join("\n")}\n`);
+}
+
+function githubDonePage(title, message) {
+  return `<!doctype html><html lang="zh"><head><meta charset="utf-8"><title>${escapeHtml(title)}</title></head><body><h1>${escapeHtml(title)}</h1><p>${escapeHtml(message)}</p></body></html>`;
+}
+
+function escapeHtml(value) {
+  return String(value || "").replace(/[&<>"]/g, (char) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[char]));
+}
+
+function sendHtml(res, status, html) {
+  res.writeHead(status, { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store" });
+  res.end(html);
 }
 
 function updateProfile(req, res, user) {
@@ -444,6 +657,7 @@ async function parseShare(req, res, user) {
   const text = textOrNull(body.text);
   const images = Array.isArray(body.images) ? body.images.filter((item) => typeof item === "string" && item.length > 0).slice(0, 4) : [];
   if (!text && images.length === 0) throw httpError(400, "没有文字或图片");
+  if (images.length && isDeepseek(ai)) throw httpError(400, "DeepSeek 只识别文字，带图片请改用 Grok");
   const raw = await callGrok(text, images, ai);
   send(res, 200, { raw, items: extractItems(raw) });
 }
@@ -457,6 +671,7 @@ async function callGrok(text, images, ai, timeoutMs = 180000) {
   }));
   userContent.push({ type: "input_text", text: userPrompt(text, images.length) });
   const useResponses = ai.baseUrl.includes("api.x.ai");
+  const deepseek = isDeepseek(ai);
   const endpoint = useResponses ? `${ai.baseUrl}/responses` : `${ai.baseUrl}/chat/completions`;
   const payload = useResponses
     ? {
@@ -471,6 +686,7 @@ async function callGrok(text, images, ai, timeoutMs = 180000) {
     : {
         model: ai.model,
         temperature: 0.2,
+        ...(deepseek && !/reasoner/i.test(ai.model) ? { response_format: { type: "json_object" } } : {}),
         messages: [
           { role: "system", content: systemPrompt(now) },
           {
@@ -487,6 +703,7 @@ async function callGrok(text, images, ai, timeoutMs = 180000) {
           },
         ],
       };
+  if (deepseek && /reasoner/i.test(ai.model)) delete payload.temperature;
   let response = await postJson(endpoint, payload, ai.apiKey, timeoutMs);
   if (response.status === 400 && payload.reasoning) {
     delete payload.reasoning;
@@ -498,6 +715,10 @@ async function callGrok(text, images, ai, timeoutMs = 180000) {
   const content = extractAssistantText(response.json);
   if (!content) throw httpError(502, "模型没有返回正文");
   return content;
+}
+
+function isDeepseek(ai) {
+  return /deepseek/i.test(`${ai?.baseUrl || ""} ${ai?.model || ""}`);
 }
 
 function systemPrompt(now) {
@@ -937,6 +1158,8 @@ function migrateUsers() {
   if (!columns.includes("ai_base_url")) db.exec("ALTER TABLE users ADD COLUMN ai_base_url TEXT");
   if (!columns.includes("ai_model")) db.exec("ALTER TABLE users ADD COLUMN ai_model TEXT");
   if (!columns.includes("ai_api_key")) db.exec("ALTER TABLE users ADD COLUMN ai_api_key TEXT");
+  if (!columns.includes("github_id")) db.exec("ALTER TABLE users ADD COLUMN github_id TEXT");
+  db.exec("CREATE UNIQUE INDEX IF NOT EXISTS idx_users_github ON users(github_id) WHERE github_id IS NOT NULL");
   db.exec("UPDATE users SET username_key = lower(username) WHERE username_key IS NULL OR username_key = ''");
   db.exec("UPDATE users SET display_name = username WHERE display_name IS NULL OR display_name = ''");
   db.exec("CREATE UNIQUE INDEX IF NOT EXISTS idx_users_key ON users(username_key)");

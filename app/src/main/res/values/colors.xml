@@ -1,20 +1,43 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="paper">#F2F2F7</color>
-    <color name="paper_deep">#E5E5EA</color>
+    <!-- Backgrounds -->
+    <color name="paper">#F7F8FA</color>
+    <color name="paper_deep">#EEF0F3</color>
     <color name="card">#FFFFFF</color>
-    <color name="ink">#1C1C1E</color>
+    <color name="card_pressed">#F3F4F6</color>
+
+    <!-- Typography -->
+    <color name="ink">#191C20</color>
+    <color name="ink_secondary">#495057</color>
     <color name="muted">#8E8E93</color>
-    <color name="line">#E5E5EA</color>
+    <color name="ink_soft">#F2F3F5</color>
+
+    <!-- Dividers & Borders -->
+    <color name="line">#E6E8EC</color>
+    <color name="line_subtle">#F1F3F5</color>
+
+    <!-- Primary Accent (Apple Blue) -->
     <color name="seal">#007AFF</color>
-    <color name="seal_dark">#007AFF</color>
-    <color name="seal_soft">#EAF3FF</color>
-    <color name="moss">#3E6B54</color>
-    <color name="moss_soft">#F1F5F2</color>
-    <color name="amber">#8A6232</color>
-    <color name="amber_soft">#F6F3EE</color>
-    <color name="gold">#8A8A8A</color>
-    <color name="chip_low">#6E6E6E</color>
-    <color name="ink_soft">#F2F2F7</color>
+    <color name="seal_dark">#0062CC</color>
+    <color name="seal_soft">#EEF4FF</color>
+
+    <!-- Semantic Tints -->
     <color name="danger">#FF3B30</color>
+    <color name="danger_soft">#FFF2F1</color>
+    <color name="success">#34C759</color>
+    <color name="success_soft">#EBFBF0</color>
+    <color name="warning">#FF9500</color>
+    <color name="warning_soft">#FFF8EE</color>
+    <color name="purple">#AF52DE</color>
+    <color name="purple_soft">#F7EEFC</color>
+    <color name="teal">#30B0C7</color>
+    <color name="teal_soft">#ECF8FA</color>
+
+    <!-- Legacy Color Tokens -->
+    <color name="moss">#34C759</color>
+    <color name="moss_soft">#EBFBF0</color>
+    <color name="amber">#FF9500</color>
+    <color name="amber_soft">#FFF8EE</color>
+    <color name="gold">#8E8E93</color>
+    <color name="chip_low">#6E6E6E</color>
 </resources>

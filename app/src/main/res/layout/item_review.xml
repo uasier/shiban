@@ -7,10 +7,11 @@
     android:background="@drawable/bg_card"
     android:orientation="vertical"
     android:paddingLeft="16dp"
-    android:paddingTop="14dp"
+    android:paddingTop="16dp"
     android:paddingRight="16dp"
-    android:paddingBottom="16dp">
+    android:paddingBottom="18dp">
 
+    <!-- Card Header -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -22,6 +23,7 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
+            android:fontFamily="sans-serif-medium"
             android:text="事项 1"
             android:textColor="@color/ink"
             android:textSize="16sp"
@@ -32,29 +34,37 @@
             android:layout_width="wrap_content"
             android:layout_height="32dp"
             android:gravity="center"
-            android:paddingLeft="8dp"
+            android:paddingLeft="10dp"
             android:paddingRight="4dp"
             android:text="移除"
-            android:textColor="@color/seal"
+            android:textColor="@color/danger"
             android:textSize="13sp" />
     </LinearLayout>
 
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="0.8dp"
+        android:layout_marginTop="10dp"
+        android:layout_marginBottom="4dp"
+        android:background="@color/line" />
+
+    <!-- Content -->
     <TextView
         style="@style/ShibanLabel"
-        android:layout_marginTop="12dp"
-        android:text="内容" />
+        android:text="待办内容" />
 
     <android.widget.EditText
         android:id="@+id/content"
         style="@style/Widget.Shiban.Field"
         android:gravity="top|start"
-        android:hint="要做的事"
+        android:hint="要做的事…"
         android:inputType="textMultiLine|textCapSentences"
         android:minLines="2" />
 
+    <!-- Time & Reminder -->
     <TextView
         style="@style/ShibanLabel"
-        android:text="时间" />
+        android:text="提醒时间" />
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -66,20 +76,22 @@
         <TextView
             android:id="@+id/timeButton"
             android:layout_width="0dp"
-            android:layout_height="48dp"
+            android:layout_height="46dp"
             android:layout_weight="1"
             android:background="@drawable/bg_input"
+            android:drawableStart="@drawable/ic_clock"
+            android:drawablePadding="10dp"
             android:gravity="center_vertical"
             android:paddingLeft="14dp"
             android:paddingRight="14dp"
             android:text="选择时间"
             android:textColor="@color/ink"
-            android:textSize="15sp" />
+            android:textSize="14sp" />
 
         <TextView
             android:id="@+id/timeClear"
             android:layout_width="wrap_content"
-            android:layout_height="48dp"
+            android:layout_height="46dp"
             android:gravity="center"
             android:paddingLeft="12dp"
             android:text="清除"
@@ -105,10 +117,11 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="6dp"
-        android:textColor="@color/gold"
+        android:textColor="@color/warning"
         android:textSize="12sp"
         android:visibility="gone" />
 
+    <!-- Location -->
     <TextView
         style="@style/ShibanLabel"
         android:text="地点" />
@@ -116,12 +129,15 @@
     <android.widget.EditText
         android:id="@+id/location"
         style="@style/Widget.Shiban.Field"
-        android:hint="可空"
+        android:drawableStart="@drawable/ic_location"
+        android:drawablePadding="10dp"
+        android:hint="可留空，如：办公室、会议室"
         android:inputType="text" />
 
+    <!-- Importance Toggle -->
     <TextView
         style="@style/ShibanLabel"
-        android:text="重要性 · 影响大不大" />
+        android:text="重要性 · 影响程度" />
 
     <com.google.android.material.button.MaterialButtonToggleGroup
         android:id="@+id/importance"
@@ -156,9 +172,10 @@
             android:text="低" />
     </com.google.android.material.button.MaterialButtonToggleGroup>
 
+    <!-- Necessity Toggle -->
     <TextView
         style="@style/ShibanLabel"
-        android:text="必要性 · 不做行不行" />
+        android:text="必要性 · 是否必做" />
 
     <com.google.android.material.button.MaterialButtonToggleGroup
         android:id="@+id/necessity"
@@ -193,6 +210,7 @@
             android:text="可选" />
     </com.google.android.material.button.MaterialButtonToggleGroup>
 
+    <!-- Note -->
     <TextView
         style="@style/ShibanLabel"
         android:text="备注" />
@@ -201,7 +219,7 @@
         android:id="@+id/note"
         style="@style/Widget.Shiban.Field"
         android:gravity="top|start"
-        android:hint="判断依据，可改"
+        android:hint="判断依据或补充说明…"
         android:inputType="textMultiLine|textCapSentences"
         android:minLines="2"
         android:textSize="14sp" />

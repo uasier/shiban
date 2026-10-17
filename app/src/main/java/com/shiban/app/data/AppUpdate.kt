@@ -27,7 +27,38 @@ object AppUpdate {
     )
 
     fun check(context: Context): Release {
-        val json = getJson(GITHUB_LATEST)
+        val server = SettingsStore(context).serverUrl.trimEnd('/')
+        if (server.isNotBlank()) {
+            try {
+                return fromServer(getJson("$server/api/app"))
+            } catch (_: Exception) {
+            }
+        }
+        return fromGithub(getJson(GITHUB_LATEST))
+    }
+
+    fun isNewer(release: Release): Boolean {
+        if (release.versionCode > 0) return release.versionCode > BuildConfig.VERSION_CODE
+        return compareVersion(release.version, BuildConfig.VERSION_NAME) > 0
+    }
+
+    private fun fromServer(json: JSONObject): Release {
+        val version = json.optString("version").removePrefix("v")
+        val apkUrl = json.optString("apkUrl")
+        if (version.isBlank() || apkUrl.isBlank() || !json.optBoolean("apkReady", true)) {
+            throw ApiException("服务端还没有可安装的版本")
+        }
+        val notes = buildList {
+            val array = json.optJSONArray("notes") ?: return@buildList
+            for (index in 0 until array.length()) {
+                val note = array.optString(index).trim()
+                if (note.isNotBlank()) add(note)
+            }
+        }
+        return Release(version, json.optInt("versionCode"), notes, apkUrl)
+    }
+
+    private fun fromGithub(json: JSONObject): Release {
         val version = json.optString("tag_name").removePrefix("v").ifBlank { "未知版本" }
         val notes = json.optString("body")
             .lineSequence()
@@ -46,10 +77,8 @@ object AppUpdate {
             }
         }
         if (apkUrl.isBlank()) throw ApiException("GitHub 发布里没有 Android 安装包")
-        return Release(version, compareVersion(version, "0"), notes, apkUrl)
+        return Release(version, 0, notes, apkUrl)
     }
-
-    fun isNewer(release: Release): Boolean = compareVersion(release.version, BuildConfig.VERSION_NAME) > 0
 
     fun promptIfNeeded(activity: AppCompatActivity) {
         val settings = SettingsStore(activity)

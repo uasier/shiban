@@ -40,7 +40,6 @@ import com.shiban.app.data.TodoStore
 import com.shiban.app.data.asDraft
 import com.shiban.app.net.ApiClient
 import com.shiban.app.net.ApiException
-import com.shiban.app.net.HealthReport
 import com.shiban.app.databinding.ActivityMainBinding
 import com.shiban.app.util.Io
 import com.shiban.app.reminder.Reminders
@@ -153,8 +152,10 @@ class MainActivity : AppCompatActivity() {
             }
         }
         binding.searchClear.setOnClickListener { binding.search.setText("") }
+        binding.quickAlbum.setOnClickListener { openAlbum() }
+        binding.dockAlbum.setOnClickListener { openAlbum() }
         binding.more.setOnClickListener {
-            binding.morePanel.isVisible = !binding.morePanel.isVisible
+            startActivity(Intent(this, ModulesActivity::class.java))
         }
         binding.menuAlbum.setOnClickListener {
             binding.morePanel.isVisible = false
@@ -232,10 +233,9 @@ class MainActivity : AppCompatActivity() {
                 }
             }
         })
-        binding.serverHealth.setOnClickListener { probeServer() }
+        binding.serverHealth.setOnClickListener { openSettings() }
         select(Filter.OPEN)
         handleShortcut(intent)
-        if (!Changelog.promptIfNeeded(this)) AppUpdate.promptIfNeeded(this)
     }
 
     override fun onNewIntent(intent: Intent) {
@@ -249,23 +249,20 @@ class MainActivity : AppCompatActivity() {
         reload()
         binding.root.postDelayed({ maybeOfferClipboard() }, 400)
         refreshFromServer(manual = false)
-        probeServer()
+        probeQuietly()
         Io.run { Reminders.catchUp(applicationContext) }
     }
 
-    private fun probeServer() {
-        binding.serverHealth.text = "正在探活…"
-        binding.serverHealth.setTextColor(ContextCompat.getColor(this, R.color.muted))
+    private fun probeQuietly() {
         val url = SettingsStore(this).serverUrl
         Io.run {
             val report = ApiClient(SettingsStore(applicationContext)).probe(url)
-            Io.ui { if (!isFinishing) showHealth(report) }
+            Io.ui {
+                if (isFinishing) return@ui
+                binding.serverHealth.isVisible = !report.ok
+                binding.serverHealth.text = if (report.ok) "" else report.headline
+            }
         }
-    }
-
-    private fun showHealth(report: HealthReport) {
-        binding.serverHealth.text = "${report.headline}\n${report.detail}"
-        binding.serverHealth.setTextColor(ContextCompat.getColor(this, if (report.ok) R.color.moss else R.color.danger))
     }
 
     private fun handleShortcut(intent: Intent) {
@@ -280,7 +277,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun openSettings() {
-        startActivity(Intent(this, SettingsActivity::class.java))
+        startActivity(SettingsActivity.open(this, SettingsActivity.PAGE_ACCOUNT))
     }
 
     private fun refreshFromServer(manual: Boolean) {
@@ -555,7 +552,7 @@ class MainActivity : AppCompatActivity() {
             ContextCompat.getColor(
                 this,
                 when {
-                    filter == Filter.OVERDUE -> R.color.ink
+                    filter == Filter.OVERDUE -> R.color.seal
                     overdue > 0 -> R.color.danger
                     else -> R.color.muted
                 }
@@ -570,15 +567,9 @@ class MainActivity : AppCompatActivity() {
         } else {
             "剪贴板：${preview ?: "可以记成待办"}"
         }
-        binding.emptyTitle.text = if (loggedOut) "先登录你的账号" else "还没有待办"
-        binding.emptyLead.text = if (loggedOut) {
-            "登录后，待办会跟账号走，手机和桌面能看到同一份。"
-        } else if (aiMissing) {
-            "底部可以直接写。要识别图片，再到账号页填上模型密钥。"
-        } else {
-            "底部写一句，或把聊天、海报分享过来。勾选就能完成。"
-        }
-        binding.emptySettings.text = if (loggedOut) "登录账号" else "账号与模型"
+        binding.emptyTitle.text = if (loggedOut) "先登录" else "还没有待办"
+        binding.emptySettings.isVisible = loggedOut
+        binding.emptySettings.text = "登录"
         val upcoming = open.any { it.timeMillis != null && it.timeMillis > System.currentTimeMillis() }
         val needNotify = upcoming && !NotificationManagerCompat.from(this).areNotificationsEnabled()
         val needExact = upcoming && Build.VERSION.SDK_INT >= 31 &&
@@ -597,11 +588,6 @@ class MainActivity : AppCompatActivity() {
                     refreshFromServer(manual = true)
                 }
             }
-            aiMissing -> {
-                binding.notifyBanner.isVisible = true
-                binding.notifyBanner.text = "还没配置模型。文字会按原文记下，图片识别需要密钥。点这里填写。"
-                binding.notifyBanner.setOnClickListener { openSettings() }
-            }
             needNotify -> {
                 binding.notifyBanner.isVisible = true
                 binding.notifyBanner.text = "有定时待办，但通知没开。点这里去开启。"
@@ -614,7 +600,7 @@ class MainActivity : AppCompatActivity() {
             }
             else -> binding.notifyBanner.isVisible = false
         }
-        binding.swipeHint.isVisible = shown.isNotEmpty() && !prefs.getBoolean(KEY_SWIPE, false)
+        binding.swipeHint.isVisible = false
         binding.searchClear.isVisible = query.isNotEmpty()
     }
 

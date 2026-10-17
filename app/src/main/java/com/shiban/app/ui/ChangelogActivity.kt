@@ -16,24 +16,39 @@ class ChangelogActivity : AppCompatActivity() {
         setContentView(binding.root)
         binding.back.setOnClickListener { finish() }
         val density = resources.displayMetrics.density
+
         Changelog.releases.forEach { release ->
-            binding.entries.addView(TextView(this).apply {
+            val card = LinearLayout(this).apply {
+                orientation = LinearLayout.VERTICAL
+                setBackgroundResource(R.drawable.bg_card)
+                val pad = (16 * density).toInt()
+                setPadding(pad, pad, pad, pad)
+                val params = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT
+                )
+                params.topMargin = (12 * density).toInt()
+                layoutParams = params
+            }
+            card.addView(TextView(this).apply {
                 text = release.name
                 setTextColor(ContextCompat.getColor(this@ChangelogActivity, R.color.ink))
                 textSize = 16f
                 paint.isFakeBoldText = true
-                setPadding(0, (18 * density).toInt(), 0, (6 * density).toInt())
             })
-            binding.entries.addView(TextView(this).apply {
+            card.addView(TextView(this).apply {
                 text = Changelog.notes(release)
-                setTextColor(ContextCompat.getColor(this@ChangelogActivity, R.color.muted))
-                textSize = 14f
-                setLineSpacing(4f * density, 1f)
-                layoutParams = LinearLayout.LayoutParams(
+                setTextColor(ContextCompat.getColor(this@ChangelogActivity, R.color.ink_secondary))
+                textSize = 13.5f
+                setLineSpacing(3f * density, 1f)
+                val p = LinearLayout.LayoutParams(
                     LinearLayout.LayoutParams.MATCH_PARENT,
                     LinearLayout.LayoutParams.WRAP_CONTENT
                 )
+                p.topMargin = (8 * density).toInt()
+                layoutParams = p
             })
+            binding.entries.addView(card)
         }
     }
 }

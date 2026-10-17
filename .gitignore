@@ -17,3 +17,7 @@ desktop/dist/
 *.apk
 *.dmg
 *.aab
+*.zip
+*.key
+*.crt
+*.pem

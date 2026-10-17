@@ -7,6 +7,7 @@
     android:fitsSystemWindows="true"
     android:orientation="vertical">
 
+    <!-- Top Bar -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="56dp"
@@ -25,7 +26,7 @@
             android:layout_height="wrap_content"
             android:layout_weight="1"
             android:gravity="center"
-            android:text="待办" />
+            android:text="待办详情" />
 
         <View
             android:layout_width="52dp"
@@ -34,13 +35,14 @@
 
     <View
         android:layout_width="match_parent"
-        android:layout_height="1dp"
+        android:layout_height="0.8dp"
         android:background="@color/line" />
 
     <ScrollView
         android:layout_width="match_parent"
         android:layout_height="0dp"
-        android:layout_weight="1">
+        android:layout_weight="1"
+        android:overScrollMode="never">
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -48,59 +50,57 @@
             android:orientation="vertical"
             android:padding="16dp">
 
-            <HorizontalScrollView
-                android:id="@+id/imageScroll"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:scrollbars="none"
-                android:visibility="gone">
-
-                <LinearLayout
-                    android:id="@+id/imageRow"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:orientation="horizontal" />
-            </HorizontalScrollView>
-
+            <!-- Card 1: Content -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
                 android:background="@drawable/bg_card"
                 android:orientation="vertical"
-                android:paddingLeft="16dp"
-                android:paddingTop="6dp"
-                android:paddingRight="16dp"
-                android:paddingBottom="16dp">
+                android:padding="16dp">
 
                 <TextView
                     style="@style/ShibanLabel"
-                    android:text="内容" />
+                    android:layout_marginTop="0dp"
+                    android:text="待办内容" />
 
                 <android.widget.EditText
                     android:id="@+id/content"
                     style="@style/Widget.Shiban.Field"
                     android:gravity="top|start"
+                    android:hint="写下要做的事情…"
                     android:inputType="textMultiLine|textCapSentences"
                     android:minLines="2"
                     android:textSize="16sp" />
+            </LinearLayout>
+
+            <!-- Card 2: Time & Reminder -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:background="@drawable/bg_card"
+                android:orientation="vertical"
+                android:padding="16dp">
 
                 <TextView
                     style="@style/ShibanLabel"
-                    android:text="时间" />
+                    android:layout_marginTop="0dp"
+                    android:text="提醒时间" />
 
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="6dp"
+                    android:layout_marginTop="8dp"
                     android:gravity="center_vertical">
 
                     <TextView
                         android:id="@+id/timeButton"
                         android:layout_width="0dp"
-                        android:layout_height="48dp"
+                        android:layout_height="46dp"
                         android:layout_weight="1"
                         android:background="@drawable/bg_input"
+                        android:drawableStart="@drawable/ic_clock"
+                        android:drawablePadding="10dp"
                         android:gravity="center_vertical"
                         android:paddingLeft="14dp"
                         android:paddingRight="14dp"
@@ -111,9 +111,10 @@
                     <TextView
                         android:id="@+id/timeClear"
                         android:layout_width="wrap_content"
-                        android:layout_height="48dp"
+                        android:layout_height="46dp"
                         android:gravity="center"
-                        android:paddingLeft="12dp"
+                        android:paddingLeft="14dp"
+                        android:paddingRight="4dp"
                         android:text="清除"
                         android:textColor="@color/muted"
                         android:textSize="13sp" />
@@ -122,7 +123,7 @@
                 <HorizontalScrollView
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="8dp"
+                    android:layout_marginTop="10dp"
                     android:scrollbars="none">
 
                     <LinearLayout
@@ -136,24 +137,38 @@
                     android:id="@+id/timeOriginal"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="6dp"
-                    android:textColor="@color/gold"
+                    android:layout_marginTop="8dp"
+                    android:textColor="@color/warning"
                     android:textSize="12sp"
                     android:visibility="gone" />
+            </LinearLayout>
+
+            <!-- Card 3: Location, Importance & Necessity -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:background="@drawable/bg_card"
+                android:orientation="vertical"
+                android:padding="16dp">
 
                 <TextView
                     style="@style/ShibanLabel"
+                    android:layout_marginTop="0dp"
                     android:text="地点" />
 
                 <android.widget.EditText
                     android:id="@+id/location"
                     style="@style/Widget.Shiban.Field"
-                    android:hint="可空"
+                    android:drawableStart="@drawable/ic_location"
+                    android:drawablePadding="10dp"
+                    android:hint="可留空，如：会议室、办公室"
                     android:inputType="text" />
 
                 <TextView
                     style="@style/ShibanLabel"
-                    android:text="重要性" />
+                    android:layout_marginTop="16dp"
+                    android:text="重要性 · 影响程度" />
 
                 <com.google.android.material.button.MaterialButtonToggleGroup
                     android:id="@+id/importance"
@@ -190,7 +205,8 @@
 
                 <TextView
                     style="@style/ShibanLabel"
-                    android:text="必要性" />
+                    android:layout_marginTop="16dp"
+                    android:text="必要性 · 是否必做" />
 
                 <com.google.android.material.button.MaterialButtonToggleGroup
                     android:id="@+id/necessity"
@@ -227,21 +243,41 @@
 
                 <TextView
                     style="@style/ShibanLabel"
-                    android:text="备注" />
+                    android:layout_marginTop="16dp"
+                    android:text="备注说明" />
 
                 <android.widget.EditText
                     android:id="@+id/note"
                     style="@style/Widget.Shiban.Field"
                     android:gravity="top|start"
+                    android:hint="可添加更多细节或备注…"
                     android:inputType="textMultiLine|textCapSentences"
                     android:minLines="2"
                     android:textSize="14sp" />
             </LinearLayout>
 
+            <!-- Card 4: Image Attachments -->
+            <HorizontalScrollView
+                android:id="@+id/imageScroll"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:scrollbars="none"
+                android:visibility="gone">
+
+                <LinearLayout
+                    android:id="@+id/imageRow"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal" />
+            </HorizontalScrollView>
+
+            <!-- Card 5: Source Text (if any) -->
             <TextView
                 android:id="@+id/sourceLabel"
                 style="@style/ShibanSection"
-                android:text="原始分享"
+                android:layout_marginTop="16dp"
+                android:text="原始分享来源"
                 android:visibility="gone" />
 
             <TextView
@@ -272,20 +308,23 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="14dp"
+                android:gravity="center"
                 android:textColor="@color/muted"
                 android:textSize="12sp" />
         </LinearLayout>
     </ScrollView>
 
+    <!-- Bottom Actions -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:background="@drawable/bg_bottom"
+        android:background="@drawable/bg_dock"
+        android:elevation="6dp"
         android:orientation="vertical"
         android:paddingLeft="16dp"
-        android:paddingTop="12dp"
+        android:paddingTop="10dp"
         android:paddingRight="16dp"
-        android:paddingBottom="8dp">
+        android:paddingBottom="12dp">
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -297,9 +336,9 @@
                 style="@style/Widget.Shiban.Button.Outlined"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_marginRight="8dp"
+                android:layout_marginEnd="8dp"
                 android:layout_weight="1"
-                android:text="完成" />
+                android:text="标记完成" />
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/save"
@@ -315,6 +354,8 @@
             style="@style/Widget.Shiban.Button.Text"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="删除这条待办" />
+            android:layout_marginTop="4dp"
+            android:text="删除这条待办"
+            android:textColor="@color/danger" />
     </LinearLayout>
 </LinearLayout>

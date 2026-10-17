@@ -73,11 +73,17 @@ class SettingsStore(context: Context) {
             .apply()
     }
 
+    fun expireSession() {
+        prefs.edit().remove(KEY_TOKEN).apply()
+    }
+
     companion object {
-        const val PUBLIC_SERVER = "http://154.36.168.192"
+        const val PUBLIC_SERVER = "https://shiban.uasier.com:40400"
         const val DEFAULT_SERVER = PUBLIC_SERVER
         const val DEFAULT_AI_URL = "https://api.x.ai/v1"
         const val DEFAULT_AI_MODEL = "grok-4.7"
+        const val DEEPSEEK_AI_URL = "https://api.deepseek.com"
+        const val DEEPSEEK_AI_MODEL = "deepseek-chat"
 
         fun normalizeServer(value: String?): String {
             val raw = value.orEmpty().trim().trimEnd('/')
@@ -89,9 +95,10 @@ class SettingsStore(context: Context) {
             val authority = value.substringAfter("://", value).substringBefore('/').lowercase()
             val host = authority.substringBefore(':')
             val port = authority.substringAfter(':', "")
+            if (host == "154.36.168.192" || host == "shiban.uasier.com") return true
             if (host == "localhost" || host == "127.0.0.1" || host == "10.0.2.2" || host == "0.0.0.0") return true
             if (host.startsWith("192.168.") || host.startsWith("10.")) return true
-            return port == "8787" || port == "18787" || port == "40400"
+            return port == "8787" || port == "18787"
         }
 
         private const val KEY_SERVER = "server_url"

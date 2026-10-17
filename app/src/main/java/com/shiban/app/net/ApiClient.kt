@@ -34,6 +34,8 @@ data class AccountProfile(
     val ai: AiConfig = AiConfig(SettingsStore.DEFAULT_AI_URL, SettingsStore.DEFAULT_AI_MODEL, "", false, "none")
 )
 
+data class GithubStart(val authUrl: String, val pollId: String)
+
 data class RemoteTodo(
     val id: String,
     val content: String,
@@ -57,6 +59,25 @@ class ApiClient(private val settings: SettingsStore) {
 
     fun login(username: String, password: String): AccountProfile =
         auth("/api/auth/login", username, password, "")
+
+    fun githubStart(bind: Boolean = false): GithubStart {
+        val path = if (bind) "/api/auth/github/start?bind=1" else "/api/auth/github/start"
+        val json = request("GET", path, null, auth = bind)
+        return GithubStart(json.getString("authUrl"), json.getString("pollId"))
+    }
+
+    fun githubPoll(pollId: String): JSONObject {
+        val path = "/api/auth/github/poll?id=" + java.net.URLEncoder.encode(pollId, Charsets.UTF_8.name())
+        return request("GET", path, null, auth = false)
+    }
+
+    fun completeSession(json: JSONObject): AccountProfile {
+        val token = json.optString("token")
+        if (token.isBlank()) throw ApiException("登录没有返回凭证")
+        val profile = json.optJSONObject("user")?.toProfile() ?: throw ApiException("登录没有返回账号")
+        settings.token = token
+        return remember(profile)
+    }
 
     fun me(): AccountProfile {
         val json = request("GET", "/api/me", null)
@@ -90,7 +111,7 @@ class ApiClient(private val settings: SettingsStore) {
     fun probe(serverUrl: String): HealthReport {
         val base = serverUrl.trim().trimEnd('/')
         if (!base.startsWith("http://") && !base.startsWith("https://")) {
-            return HealthReport(false, "服务端工作异常", "地址需要以 http:// 或 https:// 开头")
+            return HealthReport(false, "服务端工作异常：地址不正确", "")
         }
         val started = System.currentTimeMillis()
         return try {
@@ -107,29 +128,28 @@ class ApiClient(private val settings: SettingsStore) {
                 val stream = if (code in 200..299) connection.inputStream else connection.errorStream
                 val raw = stream?.bufferedReader()?.use { it.readText() }.orEmpty()
                 if (code !in 200..299) {
-                    return HealthReport(false, "服务端工作异常", "地址 $base\n已连通，但返回 HTTP $code\n耗时 $elapsed 毫秒")
+                    return HealthReport(false, "服务端工作异常：HTTP $code", "")
                 }
                 val json = try {
                     JSONObject(raw)
                 } catch (_: Exception) {
-                    return HealthReport(false, "服务端工作异常", "地址 $base\n已连通，但返回的不是识办服务\n耗时 $elapsed 毫秒")
+                    return HealthReport(false, "服务端工作异常", "")
                 }
                 if (!json.optBoolean("ok")) {
-                    return HealthReport(false, "服务端工作异常", "地址 $base\n服务有响应，但状态不是正常\n耗时 $elapsed 毫秒")
+                    return HealthReport(false, "服务端工作异常", "")
                 }
-                val model = if (json.optBoolean("modelConfigured")) "模型已配置" else "模型密钥未配置，不影响登录和同步"
-                HealthReport(true, "服务端工作正常", "地址 $base\n$model\n耗时 $elapsed 毫秒")
+                HealthReport(true, "服务端工作正常", "")
             } finally {
                 connection.disconnect()
             }
         } catch (_: UnknownHostException) {
-            HealthReport(false, "服务端工作异常", "地址 $base\n无法解析服务器地址")
+            HealthReport(false, "服务端工作异常：无法解析地址", "")
         } catch (_: SocketTimeoutException) {
-            HealthReport(false, "服务端工作异常", "地址 $base\n连接超时，服务没有在时限内响应")
+            HealthReport(false, "服务端工作异常：连接超时", "")
         } catch (_: ConnectException) {
-            HealthReport(false, "服务端工作异常", "地址 $base\n连接被拒绝，服务可能没有启动")
-        } catch (error: Exception) {
-            HealthReport(false, "服务端工作异常", "地址 $base\n${error.message ?: "无法连接"}")
+            HealthReport(false, "服务端工作异常：连接被拒绝", "")
+        } catch (_: Exception) {
+            HealthReport(false, "服务端工作异常：无法连接", "")
         }
     }
 
@@ -232,6 +252,7 @@ class ApiClient(private val settings: SettingsStore) {
             val code = connection.responseCode
             val stream = if (code in 200..299) connection.inputStream else connection.errorStream
             val raw = stream?.bufferedReader()?.use { it.readText() }.orEmpty()
+            if (code == 401 && auth) settings.expireSession()
             if (code !in 200..299) throw ApiException(errorMessage(code, raw), code)
             if (raw.isBlank()) return JSONObject()
             return JSONObject(raw)

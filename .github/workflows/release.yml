@@ -93,7 +93,7 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           tag="${GITHUB_REF_NAME}"
-          if [ "$tag" = "main" ] || [ -z "$tag" ]; then tag="v1.4.9"; fi
+          if [ "$tag" = "main" ] || [ -z "$tag" ]; then tag="v1.5.0"; fi
           mkdir -p out
           cp dist/android-apk/*.apk "out/shiban-${tag}.apk"
           cp dist/windows-installer/*.exe "out/shiban-${tag}-windows-x64.exe"
