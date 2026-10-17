@@ -62,8 +62,27 @@ jobs:
           name: windows-installer
           path: desktop/src-tauri/target/release/bundle/nsis/*.exe
 
+  macos:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - uses: dtolnay/rust-toolchain@stable
+      - name: install desktop dependencies
+        working-directory: desktop
+        run: npm install
+      - name: build Mac installer
+        working-directory: desktop
+        run: npm run tauri build -- --bundles dmg
+      - uses: actions/upload-artifact@v4
+        with:
+          name: macos-dmg
+          path: desktop/src-tauri/target/release/bundle/dmg/*.dmg
+
   publish:
-    needs: [android, windows]
+    needs: [android, windows, macos]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/download-artifact@v4
@@ -74,17 +93,19 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           tag="${GITHUB_REF_NAME}"
-          if [ "$tag" = "main" ] || [ -z "$tag" ]; then tag="v1.4.5"; fi
+          if [ "$tag" = "main" ] || [ -z "$tag" ]; then tag="v1.4.9"; fi
           mkdir -p out
           cp dist/android-apk/*.apk "out/shiban-${tag}.apk"
           cp dist/windows-installer/*.exe "out/shiban-${tag}-windows-x64.exe"
+          cp dist/macos-dmg/*.dmg "out/shiban-${tag}-macos-arm64.dmg"
           notes=$(cat <<EOF
           识办 ${tag}
 
           - Android：\`shiban-${tag}.apk\`
+          - Mac M 系列：\`shiban-${tag}-macos-arm64.dmg\`
           - Windows：\`shiban-${tag}-windows-x64.exe\`
 
-          手机可在设置里检查更新，安装包从 GitHub Releases 下载。Windows 端在侧边栏点「检查更新」查看下载地址。
+          手机可在设置里检查更新，安装包从 GitHub Releases 下载。桌面端在菜单里点「检查更新」查看下载地址。
           服务是否正常请用应用内「探活」，探活连的是识办服务，不走 GitHub。
           EOF
           )

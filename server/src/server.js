@@ -81,6 +81,18 @@ server.listen(PORT, HOST, () => {
 
 async function route(req, res, url, user) {
   const { pathname } = url;
+  if (req.method === "GET" && (pathname === "/" || pathname === "/index.html")) {
+    return sendFile(res, path.join(root, "site", "index.html"), "text/html; charset=utf-8");
+  }
+  if (req.method === "GET" && pathname === "/download/shiban.apk") {
+    return sendFile(res, path.join(root, "releases", "shiban.apk"), "application/vnd.android.package-archive", "shiban.apk");
+  }
+  if (req.method === "GET" && pathname === "/download/shiban-windows.exe") {
+    return sendFile(res, path.join(root, "releases", "shiban-windows.exe"), "application/vnd.microsoft.portable-executable", "shiban-windows.exe");
+  }
+  if (req.method === "GET" && pathname === "/download/shiban-mac.dmg") {
+    return sendFile(res, path.join(root, "releases", "shiban-mac.dmg"), "application/x-apple-diskimage", "shiban-mac.dmg");
+  }
   if (req.method === "GET" && pathname === "/api/health") {
     return send(res, 200, {
       ok: true,
@@ -774,6 +786,23 @@ function downloadApp(res) {
     "Cache-Control": "no-cache",
   });
   fs.createReadStream(file).pipe(res);
+}
+
+function sendFile(res, file, type, downloadName) {
+  const rootDir = path.resolve(root);
+  const resolved = path.resolve(file);
+  if (!resolved.startsWith(rootDir + path.sep) || !fs.existsSync(resolved)) {
+    throw httpError(404, "文件不存在");
+  }
+  const stat = fs.statSync(resolved);
+  const headers = {
+    "Content-Type": type,
+    "Content-Length": stat.size,
+    "Cache-Control": "no-cache",
+  };
+  if (downloadName) headers["Content-Disposition"] = `attachment; filename="${downloadName}"`;
+  res.writeHead(200, headers);
+  fs.createReadStream(resolved).pipe(res);
 }
 
 function send(res, status, body) {

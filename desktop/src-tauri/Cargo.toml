@@ -1,6 +1,6 @@
 [package]
 name = "shiban"
-version = "1.4.5"
+version = "1.4.9"
 description = "识办桌面端"
 authors = ["shiban"]
 edition = "2021"
